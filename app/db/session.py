@@ -34,7 +34,10 @@ def parse_mysql_time(value: Any = None) -> str:
         if isinstance(value, datetime):
             dt = value
         elif isinstance(value, (int, float)):
-            dt = datetime.fromtimestamp(value)
+            timestamp = float(value)
+            if timestamp > 9999999999:
+                timestamp = timestamp / 1000
+            dt = datetime.fromtimestamp(timestamp)
         elif isinstance(value, str):
             normalized = value.replace("Z", "").replace("T", " ")
             dt = datetime.fromisoformat(normalized)

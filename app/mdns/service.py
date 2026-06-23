@@ -38,9 +38,6 @@ class MdnsSensorService:
     def get_discovered_sensors(self) -> list[dict[str, Any]]:
         return list(self.discovered_sensors.values())
 
-    def get_discovered_sensor(self, sensor_id: str) -> dict[str, Any] | None:
-        return self.discovered_sensors.get(sensor_id)
-
     def _on_service_state_change(self, zeroconf, service_type, name, state_change) -> None:
         if not self.loop:
             return

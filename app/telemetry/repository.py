@@ -9,80 +9,61 @@ class TelemetryRepository:
 
     def insert_temperature_humidity(
         self,
-        sen_id: int,
         time_val: Any = None,
         temp: float | None = None,
         humid: float | None = None,
-    ) -> bool:
+    ) -> int:
         with self.db.connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO th_trans (sen_id, time, temp, humid)
-                    VALUES (%s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE
-                        temp = VALUES(temp),
-                        humid = VALUES(humid)
-                    """,
-                    (sen_id, parse_mysql_time(time_val), temp, humid),
-                )
-            conn.commit()
-            return True
-
-    def insert_heart_rate(self, sen_id: int, time_val: Any = None, hr: float | None = None) -> bool:
-        with self.db.connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    """
-                    INSERT INTO hb_trans (sen_id, time, hr)
+                    INSERT INTO temperature_humidity_sensor (temperature, humidity, measured_at)
                     VALUES (%s, %s, %s)
-                    ON DUPLICATE KEY UPDATE hr = VALUES(hr)
                     """,
-                    (sen_id, parse_mysql_time(time_val), hr),
+                    (temp, humid, parse_mysql_time(time_val)),
                 )
+                sensor_id = cursor.lastrowid
             conn.commit()
-            return True
+            return int(sensor_id)
 
-    def get_latest_temperature_humidity(self, sensor_id: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
-        where = ""
-        params: tuple[Any, ...] = (limit,)
-        if sensor_id:
-            where = "WHERE s.sensor_id = %s"
-            params = (sensor_id, limit)
-
+    def insert_heart_rate(self, time_val: Any = None, hr: float | None = None) -> int:
         with self.db.connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    f"""
-                    SELECT s.sensor_id, s.sen_name, t.sen_id, t.time, t.temp, t.humid
-                    FROM th_trans t
-                    JOIN sensor s ON s.sen_id = t.sen_id
-                    {where}
-                    ORDER BY t.time DESC
+                    """
+                    INSERT INTO heartbeat_sensor (heart_rate, measured_at)
+                    VALUES (%s, %s)
+                    """,
+                    (hr, parse_mysql_time(time_val)),
+                )
+                sensor_id = cursor.lastrowid
+            conn.commit()
+            return int(sensor_id)
+
+    def get_latest_temperature_humidity(self, limit: int = 20) -> list[dict[str, Any]]:
+        with self.db.connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT sensor_id, temperature, humidity, measured_at
+                    FROM temperature_humidity_sensor
+                    ORDER BY measured_at DESC, sensor_id DESC
                     LIMIT %s
                     """,
-                    params,
+                    (limit,),
                 )
                 return list(cursor.fetchall())
 
-    def get_latest_heart_rate(self, sensor_id: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
-        where = ""
-        params: tuple[Any, ...] = (limit,)
-        if sensor_id:
-            where = "WHERE s.sensor_id = %s"
-            params = (sensor_id, limit)
-
+    def get_latest_heart_rate(self, limit: int = 20) -> list[dict[str, Any]]:
         with self.db.connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    f"""
-                    SELECT s.sensor_id, s.sen_name, h.sen_id, h.time, h.hr
-                    FROM hb_trans h
-                    JOIN sensor s ON s.sen_id = h.sen_id
-                    {where}
-                    ORDER BY h.time DESC
+                    """
+                    SELECT sensor_id, heart_rate, measured_at
+                    FROM heartbeat_sensor
+                    ORDER BY measured_at DESC, sensor_id DESC
                     LIMIT %s
                     """,
-                    params,
+                    (limit,),
                 )
                 return list(cursor.fetchall())
