@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     mariadb_host: str = "127.0.0.1"
     mariadb_user: str = "root"
     mariadb_password: str = "ekthf123"
-    mariadb_db_name: str = "ON_SAFE" # 생성한 DB 이름
+    mariadb_db_name: str = "dasol" # 생성한 DB 이름
     mariadb_port: int = 3306
 
     mqtt_broker_host: str = "localhost"
