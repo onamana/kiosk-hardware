@@ -110,7 +110,7 @@ class MqttSensorService:
         data_type: str,
         payload: dict[str, Any],
     ) -> None:
-        sensor_name = str(payload.get("sensor_id") or self._extract_sensor_id_from_topic(topic) or "")
+        sensor_name = str(payload.get("sensor_name") or payload.get("sensor_id") or self._extract_sensor_id_from_topic(topic) or "")
         ts = payload.get("time") or payload.get("timestamp") or datetime.now()
 
         if data_type == "temperature":
@@ -118,10 +118,11 @@ class MqttSensorService:
             humid = self._first_present(payload, HUMIDITY_KEYS)
             if temp is None and humid is None:
                 return
-            sensor_id = self.telemetry_repository.insert_temperature_humidity(ts, temp, humid)
+            sensor_id = self.telemetry_repository.insert_temperature_humidity(ts, temp, humid, sensor_name)
             logger.info(
-                "[Hardware DB] inserted temperature_humidity_sensor sensor_id=%s temp=%s humid=%s measured_at=%s topic=%s",
+                "[Hardware DB] inserted temperature_humidity_sensor sensor_id=%s sensor_name=%s temp=%s humid=%s measured_at=%s topic=%s",
                 sensor_id,
+                sensor_name or "-",
                 temp,
                 humid,
                 ts,

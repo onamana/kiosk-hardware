@@ -1,0 +1,18 @@
+[Unit]
+Description=Kiosk SONOFF temperature/humidity MQTT bridge
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+ConditionPathExists=/home/ds/qkreodb/kiosk-hardware/.env.sonoff
+
+[Service]
+Type=simple
+User=ds
+WorkingDirectory=/home/ds/qkreodb/kiosk-hardware
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/ds/qkreodb/kiosk-hardware/.env.sonoff
+ExecStart=/home/ds/qkreodb/kiosk-hardware/kvenv/bin/python /home/ds/qkreodb/kiosk-hardware/scripts/sonoff.py --interval 5
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

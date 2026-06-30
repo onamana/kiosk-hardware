@@ -50,11 +50,11 @@ uvicorn app.main:app --reload --port 8081
 ```
 
 ```bash
-python scripts/temp_humi_collector.py
+python scripts/shelly.py
 ```
 
 The collector listens to temperature/humidity source topics and republishes normalized
-telemetry to `sensors/shelly-ht-001/telemetry`, which the hardware server stores
+telemetry to `sensors/shelly_1/telemetry`, which the hardware server stores
 in `temperature_humidity_sensor`. After the first real reading arrives,
 the collector republishes the latest temperature/humidity every 5 minutes by
 default. Configure the sensor itself to wake/report every 5 minutes.
@@ -62,7 +62,7 @@ default. Configure the sensor itself to wake/report every 5 minutes.
 Disable repeated publishing:
 
 ```bash
-python scripts/temp_humi_collector.py --republish-interval 0
+python scripts/shelly.py --republish-interval 0
 ```
 
 Check the inserted rows:
@@ -105,13 +105,16 @@ topic: sensors/{sensor_id}/telemetry
 
 ```json
 {
-  "sensor_id": "shelly-ht-001",
+  "sensor_id": "shelly_1",
   "sensor_type": "temp_humidity",
+  "sensor_name": "shelly_1",
   "temp": 24.4,
   "humid": 73.7,
   "timestamp": "2026-06-17T12:00:00"
 }
 ```
+
+SONOFF SNZB-02P temperature/humidity messages use the same shape with `"sensor_name": "sonoff_1"`.
 
 Temperature/humidity samples are inserted into
 `temperature_humidity_sensor(temperature, humidity, measured_at)`. `sensor_type`

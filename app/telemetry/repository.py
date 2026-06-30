@@ -12,15 +12,16 @@ class TelemetryRepository:
         time_val: Any = None,
         temp: float | None = None,
         humid: float | None = None,
+        sensor_name: str | None = None,
     ) -> int:
         with self.db.connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO temperature_humidity_sensor (temperature, humidity, measured_at)
-                    VALUES (%s, %s, %s)
+                    INSERT INTO temperature_humidity_sensor (sensor_name, temperature, humidity, measured_at)
+                    VALUES (%s, %s, %s, %s)
                     """,
-                    (temp, humid, parse_mysql_time(time_val)),
+                    (sensor_name, temp, humid, parse_mysql_time(time_val)),
                 )
                 sensor_id = cursor.lastrowid
             conn.commit()
@@ -45,7 +46,7 @@ class TelemetryRepository:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
-                    SELECT sensor_id, temperature, humidity, measured_at
+                    SELECT sensor_id, sensor_name, temperature, humidity, measured_at
                     FROM temperature_humidity_sensor
                     ORDER BY measured_at DESC, sensor_id DESC
                     LIMIT %s

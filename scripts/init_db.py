@@ -19,6 +19,7 @@ SCHEMA_SQL = (
     """
     CREATE TABLE IF NOT EXISTS temperature_humidity_sensor (
         sensor_id INT NOT NULL AUTO_INCREMENT,
+        sensor_name VARCHAR(100) NULL,
         temperature DECIMAL(5,2) NULL,
         humidity DECIMAL(5,2) NULL,
         measured_at DATETIME NOT NULL,

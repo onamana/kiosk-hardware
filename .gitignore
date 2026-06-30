@@ -11,3 +11,8 @@ __pycache__/
 .ruff_cache/
 
 *.log
+
+mediamtx
+mediamtx.yml
+
+*.jpg
