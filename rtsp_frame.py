@@ -3,6 +3,7 @@ import cv2
 import time
 import shutil
 import tempfile
+import threading
 from pathlib import Path
 
 
@@ -13,6 +14,17 @@ from pathlib import Path
 RTSP_URL = "rtsp://admin:ekthf123@172.16.0.243:554/stream1"
 
 OUTPUT_DIR = Path("./frames")
+
+CAMERAS = {
+    "CAM-1": {
+        "rtsp_url": "rtsp://admin:ekthf123@172.16.0.243:554/stream1",
+        "output_dir": Path("./frame1"),
+    },
+    "CAM-2": {
+        "rtsp_url": "rtsp://admin:@Ekthf5081@172.16.0.20:554/stream1",
+        "output_dir": Path("./frame2"),
+    },
+}
 
 INPUT_FPS_ASSUMED = 60
 OUTPUT_FRAME_COUNT = 30
@@ -173,5 +185,54 @@ def main():
         )
 
 
+def capture_camera_loop(camera_id: str, rtsp_url: str, output_dir: Path):
+    print(f"[{camera_id}] RTSP frame capture start")
+    print(f"[{camera_id}] output directory: {output_dir.resolve()}")
+
+    cap = open_rtsp_capture(rtsp_url)
+
+    while True:
+        if not cap.isOpened():
+            print(f"[{camera_id}] RTSP connection failed. Reconnecting...")
+            cap.release()
+            time.sleep(RECONNECT_DELAY_SEC)
+            cap = open_rtsp_capture(rtsp_url)
+            continue
+
+        frames = collect_frames_for_one_second(cap)
+
+        if len(frames) == 0:
+            print(f"[{camera_id}] no frames received. Reconnecting...")
+            cap.release()
+            time.sleep(RECONNECT_DELAY_SEC)
+            cap = open_rtsp_capture(rtsp_url)
+            continue
+
+        selected_frames = select_30_frames(frames)
+        replace_output_dir_with_frames(selected_frames, output_dir)
+
+        print(
+            f"[{camera_id}] received frames: {len(frames)} -> "
+            f"saved frames: {len(selected_frames)}"
+        )
+
+
+def main_multi_camera():
+    print("RTSP multi-camera frame capture start")
+    threads = []
+    for camera_id, camera in CAMERAS.items():
+        thread = threading.Thread(
+            target=capture_camera_loop,
+            args=(camera_id, camera["rtsp_url"], camera["output_dir"]),
+            daemon=False,
+            name=f"rtsp-frame-{camera_id}",
+        )
+        thread.start()
+        threads.append(thread)
+
+    for thread in threads:
+        thread.join()
+
+
 if __name__ == "__main__":
-    main()
+    main_multi_camera()
