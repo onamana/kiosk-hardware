@@ -1,25 +1,70 @@
 import os
-import cv2
-import time
 import shutil
 import tempfile
+import threading
+import time
 from pathlib import Path
+from typing import TypedDict
+
+import cv2
+import pymysql
+
+from app.config.settings import settings
 
 
 # =========================
 # 설정값
 # =========================
 
-RTSP_URL = "rtsp://admin:ekthf123@172.16.0.243:554/stream1"
-
-OUTPUT_DIR = Path("./frames")
-
 INPUT_FPS_ASSUMED = 60
-OUTPUT_FRAME_COUNT = 30
-
+OUTPUT_FRAME_COUNT = 2
 JPEG_QUALITY = 90
-
 RECONNECT_DELAY_SEC = 3
+
+
+class CameraConfig(TypedDict):
+    camera_id: str
+    rtsp_url: str
+    output_dir: Path
+
+
+def load_cameras_from_db() -> list[CameraConfig]:
+    db_config = {
+        "host": settings.mariadb_host,
+        "user": settings.mariadb_user,
+        "password": settings.mariadb_password,
+        "database": settings.mariadb_db_name,
+        "port": settings.mariadb_port,
+        "charset": "utf8mb4",
+        "cursorclass": pymysql.cursors.DictCursor,
+    }
+
+    with pymysql.connect(**db_config) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT cctv_id, rtsp_url, frame_dir
+                FROM cctv_info
+                WHERE rtsp_url IS NOT NULL
+                  AND rtsp_url <> ''
+                  AND frame_dir IS NOT NULL
+                  AND frame_dir <> ''
+                ORDER BY cctv_id
+                """
+            )
+            rows = cursor.fetchall()
+
+    cameras = []
+    for row in rows:
+        cameras.append(
+            {
+                "camera_id": f"CAM-{row['cctv_id']}",
+                "rtsp_url": row["rtsp_url"],
+                "output_dir": Path(row["frame_dir"]).expanduser(),
+            }
+        )
+
+    return cameras
 
 
 # =========================
@@ -138,39 +183,66 @@ def replace_output_dir_with_frames(frames: list, output_dir: Path):
 
 
 # =========================
-# 메인 루프
+# 카메라별 메인 루프
 # =========================
 
-def main():
-    print("RTSP 프레임 수집 시작")
-    print(f"저장 디렉터리: {OUTPUT_DIR.resolve()}")
+def capture_camera_loop(camera_id: str, rtsp_url: str, output_dir: Path) -> None:
+    print(f"[{camera_id}] RTSP 프레임 수집 시작")
+    print(f"[{camera_id}] 저장 디렉터리: {output_dir.resolve()}")
 
-    cap = open_rtsp_capture(RTSP_URL)
+    cap = open_rtsp_capture(rtsp_url)
 
     while True:
         if not cap.isOpened():
-            print("RTSP 연결 실패. 재연결 시도 중...")
+            print(f"[{camera_id}] RTSP 연결 실패. 재연결 시도 중...")
             cap.release()
             time.sleep(RECONNECT_DELAY_SEC)
-            cap = open_rtsp_capture(RTSP_URL)
+            cap = open_rtsp_capture(rtsp_url)
             continue
 
         frames = collect_frames_for_one_second(cap)
 
         if len(frames) == 0:
-            print("프레임 수신 실패. 재연결 시도 중...")
+            print(f"[{camera_id}] 프레임 수신 실패. 재연결 시도 중...")
             cap.release()
             time.sleep(RECONNECT_DELAY_SEC)
-            cap = open_rtsp_capture(RTSP_URL)
+            cap = open_rtsp_capture(rtsp_url)
             continue
 
         selected_frames = select_30_frames(frames)
 
-        replace_output_dir_with_frames(selected_frames, OUTPUT_DIR)
+        replace_output_dir_with_frames(selected_frames, output_dir)
 
         print(
-            f"수신 프레임: {len(frames)}장 → 저장 프레임: {len(selected_frames)}장"
+            f"[{camera_id}] 수신 프레임: {len(frames)}장 -> "
+            f"저장 프레임: {len(selected_frames)}장"
         )
+
+
+# =========================
+# 메인 루프
+# =========================
+
+def main():
+    print("RTSP 멀티카메라 프레임 수집 시작")
+
+    cameras = load_cameras_from_db()
+    if not cameras:
+        raise RuntimeError("cctv_info 테이블에서 사용할 카메라 설정을 찾지 못했습니다.")
+
+    threads = []
+    for camera in cameras:
+        thread = threading.Thread(
+            target=capture_camera_loop,
+            args=(camera["camera_id"], camera["rtsp_url"], camera["output_dir"]),
+            daemon=False,
+            name=f"rtsp-frame-{camera['camera_id']}",
+        )
+        thread.start()
+        threads.append(thread)
+
+    for thread in threads:
+        thread.join()
 
 
 if __name__ == "__main__":

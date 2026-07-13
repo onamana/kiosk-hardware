@@ -38,6 +38,7 @@ SCHEMA_SQL = (
     CREATE TABLE IF NOT EXISTS cctv_info (
         cctv_id INT NOT NULL AUTO_INCREMENT,
         rtsp_url VARCHAR(255) NULL,
+        frame_dir VARCHAR(200) NULL,
         PRIMARY KEY (cctv_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """,
@@ -100,6 +101,9 @@ def ensure_schema() -> None:
         with conn.cursor() as cursor:
             for statement in SCHEMA_SQL[1:]:
                 cursor.execute(statement)
+            cursor.execute("SHOW COLUMNS FROM cctv_info LIKE 'frame_dir'")
+            if cursor.fetchone() is None:
+                cursor.execute("ALTER TABLE cctv_info ADD COLUMN frame_dir VARCHAR(200) NULL AFTER rtsp_url")
         conn.commit()
 
 
