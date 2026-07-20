@@ -30,6 +30,20 @@ Health check:
 curl http://127.0.0.1:8081/health
 ```
 
+## VLM Frame Buffer
+
+rtsp_frame.py는 카메라마다 최신 프레임 한 장만 유지하고, 장축 1280으로
+축소한 JPEG를 원자적으로 교체합니다. 분석용 프레임은 재부팅 후 보존할 필요가
+없으므로 MariaDB cctv_info.frame_dir을 다음과 같이 tmpfs 경로로 설정합니다.
+
+    CAM-1: /dev/shm/kiosk-frames/frame1
+    CAM-2: /dev/shm/kiosk-frames/frame2
+
+임시파일도 최종 파일과 같은 디렉터리에 생성되며, 완성 후 os.replace()로
+frame_000.jpg를 교체합니다. /dev/shm은 RAM 기반이므로 재부팅하면
+비워지지만, 수집기가 시작될 때 카메라 디렉터리를 자동으로 다시 만듭니다.
+위험 탐지 증거 이미지는 이 경로가 아니라 VLM 서버의 영구 저장 디렉터리에 둡니다.
+
 ## Local Sensor Run
 
 Create the database and tables before running the hardware server:
