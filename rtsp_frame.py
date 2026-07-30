@@ -16,7 +16,7 @@ from app.config.settings import settings
 # =========================
 
 INPUT_FPS_ASSUMED = 60
-CAPTURE_INTERVAL_SEC = 1.0
+CAPTURE_INTERVAL_SEC = 0.5
 OUTPUT_MAX_EDGE = 1280
 JPEG_QUALITY = 90
 RECONNECT_DELAY_SEC = 3

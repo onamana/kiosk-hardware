@@ -45,10 +45,10 @@ SCHEMA_SQL = (
     """
     CREATE TABLE IF NOT EXISTS unstable_behavior (
         behavior_id INT NOT NULL AUTO_INCREMENT,
-        hat_removal_count INT NOT NULL DEFAULT 0,
-        ladder_alone_count INT NOT NULL DEFAULT 0,
-        restricted_area_count INT NOT NULL DEFAULT 0,
-        speaker_touch_count INT NOT NULL DEFAULT 0,
+        slot_1_count INT NOT NULL DEFAULT 0,
+        slot_2_count INT NOT NULL DEFAULT 0,
+        slot_3_count INT NOT NULL DEFAULT 0,
+        slot_4_count INT NOT NULL DEFAULT 0,
         PRIMARY KEY (behavior_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """,
