@@ -18,6 +18,12 @@ from app.config.settings import settings
 INPUT_FPS_ASSUMED = 60
 CAPTURE_INTERVAL_SEC = 0.5
 OUTPUT_MAX_EDGE = 1280
+# 번호판 크롭의 소스 프레임(중앙 전시홀 차량-안전모 점검용)이라 kiosk-vlm이 원본
+# 해상도를 볼 수 있어야 한다(카메라 네이티브 2560x1440). 실측(2026-08-03, Jetson
+# Thor): 장축 1280 대비 리사이즈+인코딩이 늘어도 평균 13ms 안팎 — CAPTURE_INTERVAL_SEC=0.5
+# 예산의 3% 미만이라 무시 가능. CAM-1은 kiosk-vlm이 어차피 768로 다시 줄이므로 그대로 둔다.
+# 2026-08-03: 이 역할의 실 카메라가 전원선 제약으로 CAM-2 → CAM-3(172.16.0.20)로 교체됨.
+OUTPUT_MAX_EDGE_BY_CAMERA = {"CAM-3": 2560}
 JPEG_QUALITY = 90
 RECONNECT_DELAY_SEC = 3
 OUTPUT_FRAME_NAME = "frame_000.jpg"
@@ -233,7 +239,8 @@ def capture_camera_loop(camera_id: str, rtsp_url: str, output_dir: Path) -> None
             if latest is None:
                 raise RuntimeError("프레임 수신 실패")
 
-            resized = resize_for_vlm(latest)
+            max_edge = OUTPUT_MAX_EDGE_BY_CAMERA.get(camera_id, OUTPUT_MAX_EDGE)
+            resized = resize_for_vlm(latest, max_edge)
             published = publish_frame_atomic(resized, output_dir)
             height, width = resized.shape[:2]
             print(
